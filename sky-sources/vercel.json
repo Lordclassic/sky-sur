@@ -9,7 +9,7 @@
   "routes": [
     {
       "src": "/send-email",
-      "dest": "server.js"
+      "dest": "script.js"
     }
   ]
 }
