@@ -64,18 +64,43 @@ app.post("/send-email", upload.single("receipt"), async (req, res) => {
     if (!firstName || !email) {
       return res.json({ error: "First name and email are required" });
     }
+// Refresh Token Logic
+async function getNewAccessToken() {
+  const refreshToken = process.env.DROPBOX_REFRESH_TOKEN;
+  const clientId = process.env.DROPBOX_CLIENT_ID;
+  const clientSecret = process.env.DROPBOX_CLIENT_SECRET;
 
-    // Dropbox integration: Initialize Dropbox with the access token
-    const dbx = new Dropbox({
+  const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+
+  try {
+    const response = await axios.post("https://api.dropboxapi.com/oauth2/token", null, {
+      params: {
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+      },
+      headers: {
+        Authorization: `Basic ${authHeader}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    const newAccessToken = response.data.access_token;
+    process.env.DROPBOX_ACCESS_TOKEN = newAccessToken; // Update in-memory token
+    console.log("New access token fetched:", newAccessToken);
+    return newAccessToken;
+  } catch (error) {
+    console.error("Error refreshing Dropbox token:", error.message);
+    throw error;
+  }
+}
+
+// Function to upload files to Dropbox
+async function uploadFileToDropbox(fileBuffer, fileName) {
+  try {
+    let dbx = new Dropbox({
       accessToken: process.env.DROPBOX_ACCESS_TOKEN,
       fetch: fetch,
     });
-
-    // Upload the file to Dropbox
-    if (req.file) {
-      const fileBuffer = req.file.buffer;
-      const fileName = req.file.originalname;
-
       try {
         const dropboxResponse = await dbx.filesUpload({
           path: `/${fileName}`, // Path in Dropbox (root folder)
