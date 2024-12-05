@@ -8,7 +8,7 @@
   ],
   "routes": [
     {
-      "src": "/send-email",
+      "src": "/.*",
       "dest": "script.js"
     }
   ]
